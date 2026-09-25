@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 
 
 def main():
@@ -36,7 +37,20 @@ def main():
                 if not found:
                     print(f"{argument}: not found")
         else:
-            print(f"{cmd}: not found")
+            path_dirs = os.environ["PATH"].split(os.pathsep)
+
+            found = False
+
+            for directory in path_dirs:
+                full_path = os.path.join(directory, cmd)
+
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    subprocess.run([full_path] + parts[1:])
+                    found = True
+                    break
+
+            if not found:
+                print(f"{cmd}: not found")
 
 
 if __name__ == "__main__":
