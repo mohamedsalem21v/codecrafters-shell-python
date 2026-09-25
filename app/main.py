@@ -10,10 +10,13 @@ def main():
             break
         elif command.startswith("echo "):
             print(command[5:])
-        elif command[5:] in ["type", "echo", "exit"]:
-            print(f"{command[5:]} is a shell builtin")
+        elif command.startswith("type "):
+            if command[5:] in ["type", "echo", "exit"]:
+                print(f"{command[5:]} is a shell builtin")
+            else:
+                print(f"{command[5:]}: not found")
         else:
-            print(f"{command[5:]}: command not found")
+            print(f"{command}: command not found")
 
 
 if __name__ == "__main__":
