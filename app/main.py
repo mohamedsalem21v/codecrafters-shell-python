@@ -16,10 +16,12 @@ def main():
             break
         elif cmd == "echo":
             print(command[5:])
+        elif cmd == "pwd":
+            print(os.getcwd())
         elif cmd == "type":
             argument = parts[1]
 
-            if argument in ["type", "echo", "exit"]:
+            if argument in ["type", "echo", "exit", "pwd"]:
                 print(f"{argument} is a shell builtin")
             else:
                 path_dirs = os.environ["PATH"].split(os.pathsep)
