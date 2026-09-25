@@ -1,34 +1,50 @@
 [![progress-banner](https://backend.codecrafters.io/progress/shell/d3a55dd1-75cb-472a-b22a-60483f4f794c)](https://app.codecrafters.io/users/mohamedsalem21v?r=2qF)
 
-This is a starting point for Python solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+# Build Your Own Shell (Python)
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafters "Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## 🚀 Features Implemented
 
-# Passing the first stage
+### 1. REPL & Command Handling
+- **Interactive Prompt**: Outputs `$ ` prompt and awaits user commands.
+- **Handling Invalid Commands**: Gracefully prints `<command>: not found` for unrecognized inputs.
 
-The entry point for your `shell` implementation is in `app/main.py`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+### 2. Builtin Commands
+- **`exit`**: Exits the shell cleanly (`exit 0`).
+- **`echo`**: Prints back the provided text to stdout.
+- **`type`**: Identifies whether a command is a shell builtin or an external program:
+  - Reports builtins (`<command> is a shell builtin`).
+  - Searches through `$PATH` for executables and reports their absolute paths (`<command> is <full_path>`).
+- **`pwd`**: Prints the current absolute working directory.
+- **`cd`**: Changes the current working directory:
+  - Supports **absolute paths** (e.g. `cd /usr/local/bin`).
+  - Supports **relative paths** (e.g. `cd ./local/bin`, `cd ../../`).
+  - Supports **home directory shortcut `~`** (resolves using `$HOME`).
+  - Prints error message if directory does not exist (`cd: <directory>: No such file or directory`).
+
+### 3. Running External Programs
+- Discovers executables via directories defined in the `$PATH` environment variable.
+- Checks execute permissions (`os.X_OK`) before invocation.
+- Spawns and executes programs with arguments using `subprocess.run()`.
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+- Python 3.x
+- [uv](https://github.com/astral-sh/uv) (package manager)
+
+### Running Locally
+To launch the shell locally:
 
 ```sh
-codecrafters submit
+./your_program.sh
 ```
 
-Time to move on to the next stage!
+Or run directly with Python:
 
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `uv` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.py`.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+```sh
+python -m app.main
+```
