@@ -20,6 +20,8 @@ def main():
             print(os.getcwd())
         elif cmd == "cd":
             directory = parts[1]
+            if directory == "~":
+                directory = os.environ["HOME"]
             if os.path.isdir(directory):
                 os.chdir(directory)
             else:
