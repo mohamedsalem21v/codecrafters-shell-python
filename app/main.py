@@ -18,10 +18,16 @@ def main():
             print(command[5:])
         elif cmd == "pwd":
             print(os.getcwd())
+        elif cmd == "cd":
+            directory = parts[1]
+            if os.path.isdir(directory):
+                os.chdir(directory)
+            else:
+                print(f"cd: {directory}: No such file or directory")
         elif cmd == "type":
             argument = parts[1]
 
-            if argument in ["type", "echo", "exit", "pwd"]:
+            if argument in ["type", "echo", "exit", "pwd", "cd"]:
                 print(f"{argument} is a shell builtin")
             else:
                 path_dirs = os.environ["PATH"].split(os.pathsep)
