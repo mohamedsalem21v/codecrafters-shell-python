@@ -6,32 +6,50 @@ import subprocess
 def parse_command(command):
     args = []           # List to hold each argument
     current = ""        # The argument we're currently building
-    in_single_quotes = False  # Are we inside single quotes?
-    in_double_quotes = False  # Are we inside double quotes?
+    in_single_quotes = False
+    in_double_quotes = False
+    i = 0               # Index to walk through the string
 
-    for char in command:
-        if char == "'" and not in_double_quotes:
-            if not in_single_quotes:
-                # Opening single quote — enter single-quoted mode
-                in_single_quotes = True
+    while i < len(command):
+        char = command[i]
+
+        if in_single_quotes:
+            # INSIDE SINGLE QUOTES: everything is literal, even backslashes
+            if char == "'":
+                in_single_quotes = False    # Closing single quote
             else:
-                # Closing single quote — exit single-quoted mode
-                in_single_quotes = False
-        elif char == '"' and not in_single_quotes:
-            if not in_double_quotes:
-                # Opening double quote — enter double-quoted mode
-                in_double_quotes = True
+                current += char             # Every character is literal
+
+        elif in_double_quotes:
+            # INSIDE DOUBLE QUOTES: backslash only escapes " and \
+            if char == '"':
+                in_double_quotes = False    # Closing double quote
+            elif char == '\\' and i + 1 < len(command) and command[i + 1] in '"\\$`\n':
+                # Backslash followed by a special char → escape it
+                current += command[i + 1]   # Add the next char literally
+                i += 1                      # Skip the next char
             else:
-                # Closing double quote — exit double-quoted mode
-                in_double_quotes = False
-        elif char == " " and not in_single_quotes and not in_double_quotes:
-            # Space outside ALL quotes — this is a delimiter
-            if current != "":
-                args.append(current)
-                current = ""
+                current += char             # Normal char (including \ before non-special chars)
+
         else:
-            # Normal character — add it to the current argument
-            current += char
+            # OUTSIDE ALL QUOTES
+            if char == '\\' and i + 1 < len(command):
+                # Backslash outside quotes → escape the next character
+                current += command[i + 1]   # Add the next char literally
+                i += 1                      # Skip the next char
+            elif char == "'":
+                in_single_quotes = True     # Opening single quote
+            elif char == '"':
+                in_double_quotes = True     # Opening double quote
+            elif char == ' ':
+                # Space outside quotes → delimiter
+                if current != "":
+                    args.append(current)
+                    current = ""
+            else:
+                current += char             # Normal character
+
+        i += 1  # Move to the next character
 
     # Don't forget the last argument
     if current != "":
