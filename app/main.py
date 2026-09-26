@@ -3,19 +3,47 @@ import os
 import subprocess
 
 
+def parse_command(command):
+    args = []           # List to hold each argument
+    current = ""        # The argument we're currently building
+    in_single_quotes = False  # Are we inside single quotes?
+
+    for char in command:
+        if char == "'" and not in_single_quotes:
+            # Opening single quote — enter quoted mode
+            in_single_quotes = True
+        elif char == "'" and in_single_quotes:
+            # Closing single quote — exit quoted mode
+            in_single_quotes = False
+        elif char == " " and not in_single_quotes:
+            # Space outside quotes — this is a delimiter
+            if current != "":
+                args.append(current)
+                current = ""
+        else:
+            # Normal character — add it to the current argument
+            current += char
+
+    # Don't forget the last argument
+    if current != "":
+        args.append(current)
+
+    return args
+
+
 def main():
     while True:
         sys.stdout.write("$ ")
 
         command = input()
 
-        parts = command.split(" ")
+        parts = parse_command(command)
         cmd = parts[0]
 
         if cmd == "exit":
             break
         elif cmd == "echo":
-            print(command[5:])
+            print(" ".join(parts[1:]))
         elif cmd == "pwd":
             print(os.getcwd())
         elif cmd == "cd":
