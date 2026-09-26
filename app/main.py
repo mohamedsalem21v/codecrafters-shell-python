@@ -1,6 +1,21 @@
 import sys
 import os
 import subprocess
+import readline
+
+
+# List of builtin commands for tab autocompletion
+BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
+
+
+def completer(text, state):
+    # Find all builtin commands that start with the typed text
+    matches = [cmd for cmd in BUILTINS if cmd.startswith(text)]
+
+    # Return the match at position 'state', with a trailing space
+    if state < len(matches):
+        return matches[state] + " "
+    return None
 
 
 def parse_command(command):
@@ -59,12 +74,21 @@ def parse_command(command):
 
 
 def main():
+    # Set up readline for tab autocompletion
+    readline.set_completer(completer)           # Tell readline to use our completer function
+    readline.parse_and_bind("tab: complete")    # Bind the TAB key to trigger completion
+
     while True:
         sys.stdout.write("$ ")
 
-        command = input()
+        try:
+            command = input()
+        except EOFError:
+            break
 
         parts = parse_command(command)
+        if not parts:
+            continue
         cmd = parts[0]
 
         if cmd == "exit":
