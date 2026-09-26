@@ -12,7 +12,7 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
 
 ### 2. Builtin Commands
 - **`exit`**: Exits the shell cleanly (`exit 0`).
-- **`echo`**: Prints back the provided text to stdout.
+- **`echo`**: Prints back the provided text to stdout with full quoting and escaping support.
 - **`type`**: Identifies whether a command is a shell builtin or an external program:
   - Reports builtins (`<command> is a shell builtin`).
   - Searches through `$PATH` for executables and reports their absolute paths (`<command> is <full_path>`).
@@ -23,7 +23,23 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
   - Supports **home directory shortcut `~`** (resolves using `$HOME`).
   - Prints error message if directory does not exist (`cd: <directory>: No such file or directory`).
 
-### 3. Running External Programs
+### 3. Command Line Parsing, Quoting & Escaping
+- **Single Quotes (`'...'`)**:
+  - Treats all enclosed characters literally.
+  - Preserves consecutive whitespaces.
+  - Concatenates adjacent quoted and unquoted strings.
+  - Backslashes inside single quotes are treated literally with no special escape semantics.
+- **Double Quotes (`"..."`)**:
+  - Preserves consecutive whitespace characters within quotes.
+  - Backslash escaping inside double quotes:
+    - `\"` escapes double quote (literal `"`).
+    - `\\` escapes backslash (literal `\`).
+    - Treats other backslashes literally (e.g. `\n` remains `\n`).
+  - Preserves literal single quotes nested inside.
+- **Backslash Escaping Outside Quotes**:
+  - Escapes any immediately following character, stripping special meaning (e.g., `\ ` produces a literal space without argument splitting, `\'` and `\"` produce literal quotes).
+
+### 4. Running External Programs
 - Discovers executables via directories defined in the `$PATH` environment variable.
 - Checks execute permissions (`os.X_OK`) before invocation.
 - Spawns and executes programs with arguments using `subprocess.run()`.
