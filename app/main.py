@@ -41,7 +41,7 @@ def completer(text, state):
 
     # Return matches one at a time — readline calls with state=0, 1, 2...
     if state < len(completer.matches):
-        return completer.matches[state]
+        return completer.matches[state] + " "
     return None
 
 
