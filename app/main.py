@@ -9,12 +9,39 @@ BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
 
 def completer(text, state):
-    # Find all builtin commands that start with the typed text
-    matches = [cmd for cmd in BUILTINS if cmd.startswith(text)]
+    # On the FIRST call (state=0), build the full list of matches
+    if state == 0:
+        completer.matches = []
+        seen = set()
 
-    # Return the match at position 'state', with a trailing space
-    if state < len(matches):
-        return matches[state] + " "
+        # 1. Check builtin commands
+        for cmd in BUILTINS:
+            if cmd.startswith(text) and cmd not in seen:
+                completer.matches.append(cmd)
+                seen.add(cmd)
+
+        # 2. Check PATH for executable files
+        path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+
+        for directory in path_dirs:
+            if not os.path.isdir(directory):
+                continue
+            try:
+                for filename in os.listdir(directory):
+                    if filename.startswith(text) and filename not in seen:
+                        full_path = os.path.join(directory, filename)
+                        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                            completer.matches.append(filename)
+                            seen.add(filename)
+            except OSError:
+                continue
+
+        # Sort alphabetically (required for multiple match display)
+        completer.matches.sort()
+
+    # Return matches one at a time — readline calls with state=0, 1, 2...
+    if state < len(completer.matches):
+        return completer.matches[state]
     return None
 
 
