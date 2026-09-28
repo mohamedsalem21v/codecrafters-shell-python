@@ -106,10 +106,8 @@ def main():
     readline.parse_and_bind("tab: complete")    # Bind the TAB key to trigger completion
 
     while True:
-        sys.stdout.write("$ ")
-
         try:
-            command = input()
+            command = input("$ ")
         except EOFError:
             break
 
