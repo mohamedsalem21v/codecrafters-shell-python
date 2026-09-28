@@ -44,6 +44,16 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
 - Checks execute permissions (`os.X_OK`) before invocation.
 - Spawns and executes programs with arguments using `subprocess.run()`.
 
+### 5. Tab Autocompletion (GNU Readline)
+- **Builtin Commands Autocompletion**: Autocompletes builtins (`echo`, `exit`, `type`, `pwd`, `cd`) when `<TAB>` is pressed.
+- **PATH Executables Autocompletion**: Searches through all directories in `$PATH` to match executable files with execute permissions.
+- **Single Match**: Completes the full command name with a trailing space (` `) so arguments can be typed right away.
+- **Multiple Matches & Longest Common Prefix (LCP)**:
+  - First `<TAB>` press: Completes up to the longest common prefix among matching candidates, or rings the terminal bell (`\x07`) if no further common prefix exists.
+  - Second `<TAB>` press: Displays all matching options in alphabetical order on a new line separated by spaces.
+  - Re-displays the prompt (`$ `) with the user's input intact.
+- **Completion with Arguments**: Seamlessly preserves and passes typed arguments after command name autocompletion.
+
 ---
 
 ## 🛠️ Getting Started
