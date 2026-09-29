@@ -37,7 +37,7 @@ def filename_matches(text):
     # Directories keep accepting more path text, while files finish an argument.
     if os.path.isdir(full_path):
         return [match + "/"]
-    return [match + " "]
+    return [match]
 
 
 def completer(text, state):
@@ -46,10 +46,8 @@ def completer(text, state):
         completer.matches = []
         seen = set()
 
-        # readline tells us where the word being completed starts. If text
-        # appears after another word, it is a filename argument, not a command.
-        before_text = readline.get_line_buffer()[:readline.get_begidx()]
-        if before_text.strip():
+        # Anything after the first space is a filename argument.
+        if " " in readline.get_line_buffer():
             completer.matches = filename_matches(text)
         else:
             # Complete command names for the first word, as before.
@@ -80,7 +78,10 @@ def completer(text, state):
 
     # Return matches one at a time — readline calls with state=0, 1, 2...
     if state < len(completer.matches):
-        return completer.matches[state]
+        match = completer.matches[state]
+        if match.endswith("/"):
+            return match
+        return match + " "
     return None
 
 
