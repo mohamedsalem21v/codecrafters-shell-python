@@ -8,80 +8,40 @@ import readline
 BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
 
-def filename_matches(text):
-    """Return the one matching file or directory for a filename prefix."""
-    # Keep the path the user typed (for example, "notes/") separate from
-    # the part that should be matched (for example, "rea").
-    directory, slash, prefix = text.rpartition("/")
-    directory_part = directory + slash
-
-    # No slash means that we should look in the current directory.
-    search_directory = directory_part if directory_part else "."
-
-    try:
-        matches = [
-            entry
-            for entry in os.listdir(search_directory)
-            if entry.startswith(prefix)
-        ]
-    except OSError:
-        return []
-
-    # This stage only completes when there is exactly one possible entry.
-    if len(matches) != 1:
-        return []
-
-    match = directory_part + matches[0]
-    full_path = os.path.join(search_directory, matches[0])
-
-    # Directories keep accepting more path text, while files finish an argument.
-    if os.path.isdir(full_path):
-        return [match + "/"]
-    return [match]
-
-
 def completer(text, state):
     # On the FIRST call (state=0), build the full list of matches
     if state == 0:
         completer.matches = []
         seen = set()
 
-        # Anything after the first space is a filename argument.
-        if " " in readline.get_line_buffer():
-            completer.matches = filename_matches(text)
-        else:
-            # Complete command names for the first word, as before.
-            for cmd in BUILTINS:
-                if cmd.startswith(text) and cmd not in seen:
-                    completer.matches.append(cmd)
-                    seen.add(cmd)
+        # 1. Check builtin commands
+        for cmd in BUILTINS:
+            if cmd.startswith(text) and cmd not in seen:
+                completer.matches.append(cmd)
+                seen.add(cmd)
 
-            path_dirs = os.environ.get("PATH", "").split(os.pathsep)
-            for directory in path_dirs:
-                if not os.path.isdir(directory):
-                    continue
-                try:
-                    for filename in os.listdir(directory):
+        # 2. Check PATH for executable files
+        path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+
+        for directory in path_dirs:
+            if not os.path.isdir(directory):
+                continue
+            try:
+                for filename in os.listdir(directory):
+                    if filename.startswith(text) and filename not in seen:
                         full_path = os.path.join(directory, filename)
-                        if (
-                            filename.startswith(text)
-                            and filename not in seen
-                            and os.path.isfile(full_path)
-                            and os.access(full_path, os.X_OK)
-                        ):
+                        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
                             completer.matches.append(filename)
                             seen.add(filename)
-                except OSError:
-                    continue
+            except OSError:
+                continue
 
-            completer.matches.sort()
+        # Sort alphabetically (required for multiple match display)
+        completer.matches.sort()
 
     # Return matches one at a time — readline calls with state=0, 1, 2...
     if state < len(completer.matches):
-        match = completer.matches[state]
-        if match.endswith("/"):
-            return match
-        return match + " "
+        return completer.matches[state] + " "
     return None
 
 
@@ -143,7 +103,6 @@ def parse_command(command):
 def main():
     # Set up readline for tab autocompletion
     readline.set_completer(completer)           # Tell readline to use our completer function
-    readline.set_completer_delims(" \t\n")    # Treat a complete path as one word
     readline.parse_and_bind("tab: complete")    # Bind the TAB key to trigger completion
 
     while True:
