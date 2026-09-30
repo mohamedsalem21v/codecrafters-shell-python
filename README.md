@@ -47,12 +47,16 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
 ### 5. Tab Autocompletion (GNU Readline)
 - **Builtin Commands Autocompletion**: Autocompletes builtins (`echo`, `exit`, `type`, `pwd`, `cd`) when `<TAB>` is pressed.
 - **PATH Executables Autocompletion**: Searches through all directories in `$PATH` to match executable files with execute permissions.
-- **Single Match**: Completes the full command name with a trailing space (` `) so arguments can be typed right away.
+- **Filename Completion**: Completes filenames in any argument position by matching against entries in the current working directory.
+- **Nested Path Completion**: Handles paths with `/` (e.g. `path/to/f<TAB>` → `path/to/file.txt`).
+- **Directory Completion**: Directories are completed with a trailing `/` (no space), allowing immediate deeper navigation. Files are completed with a trailing space.
+- **Single Match**: Completes the full name with the appropriate trailing character (`/` for dirs, space for files/commands).
 - **Multiple Matches & Longest Common Prefix (LCP)**:
   - First `<TAB>` press: Completes up to the longest common prefix among matching candidates, or rings the terminal bell (`\x07`) if no further common prefix exists.
-  - Second `<TAB>` press: Displays all matching options in alphabetical order on a new line separated by spaces.
+  - Second `<TAB>` press: Displays all matching options in alphabetical order (directories shown with `/` suffix).
   - Re-displays the prompt (`$ `) with the user's input intact.
-- **Completion with Arguments**: Seamlessly preserves and passes typed arguments after command name autocompletion.
+- **No Match**: Rings the bell and leaves input unchanged when no completions are found.
+- **Any Argument Position**: Completion works identically for every argument, not just the first one after the command.
 
 ---
 
