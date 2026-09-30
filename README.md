@@ -22,6 +22,9 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
   - Supports **relative paths** (e.g. `cd ./local/bin`, `cd ../../`).
   - Supports **home directory shortcut `~`** (resolves using `$HOME`).
   - Prints error message if directory does not exist (`cd: <directory>: No such file or directory`).
+- **`history`**: Lists previously executed commands formatted with 1-based indexing:
+  - Supports optional limit argument `history <n>` to show only the last `n` commands.
+  - Automatically records all commands including `history` itself in the session log.
 
 ### 3. Command Line Parsing, Quoting & Escaping
 - **Single Quotes (`'...'`)**:
@@ -45,7 +48,7 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
 - Spawns and executes programs with arguments using `subprocess.run()`.
 
 ### 5. Tab Autocompletion (GNU Readline)
-- **Builtin Commands Autocompletion**: Autocompletes builtins (`echo`, `exit`, `type`, `pwd`, `cd`) when `<TAB>` is pressed.
+- **Builtin Commands Autocompletion**: Autocompletes builtins (`echo`, `exit`, `type`, `pwd`, `cd`, `history`) when `<TAB>` is pressed.
 - **PATH Executables Autocompletion**: Searches through all directories in `$PATH` to match executable files with execute permissions.
 - **Filename Completion**: Completes filenames in any argument position by matching against entries in the current working directory.
 - **Nested Path Completion**: Handles paths with `/` (e.g. `path/to/f<TAB>` → `path/to/file.txt`).
@@ -57,6 +60,11 @@ A POSIX-compliant shell built from scratch in Python as part of the [CodeCrafter
   - Re-displays the prompt (`$ `) with the user's input intact.
 - **No Match**: Rings the bell and leaves input unchanged when no completions are found.
 - **Any Argument Position**: Completion works identically for every argument, not just the first one after the command.
+
+### 6. Command History Navigation
+- **Up-Arrow Recall**: Seamlessly navigates backwards through session command history.
+- **Down-Arrow Recall**: Navigates forward through recalled commands.
+- **Enter to Execute**: Pressing `Enter` immediately runs any recalled command.
 
 ---
 
