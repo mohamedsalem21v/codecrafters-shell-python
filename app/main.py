@@ -18,7 +18,7 @@ except (OSError, ValueError, TypeError):
     pass
 
 # List of builtin commands for tab autocompletion
-BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
+BUILTINS = ["echo", "exit", "type", "pwd", "cd", "history"]
 
 
 def display_hook(substitution, matches, longest_match_length):
@@ -163,6 +163,7 @@ def main():
     readline.set_completer_delims(' \t\n')                       # Only split words on whitespace
     readline.parse_and_bind("tab: complete")
     readline.set_completion_display_matches_hook(display_hook)   # Custom display for matches
+    history_entries = []
 
     while True:
         try:
@@ -173,6 +174,10 @@ def main():
         parts = parse_command(command)
         if not parts:
             continue
+
+        # Keep the original command text in history and register it with readline
+        history_entries.append(command)
+        readline.add_history(command)
         cmd = parts[0]
 
         if cmd == "exit":
@@ -189,10 +194,16 @@ def main():
                 os.chdir(directory)
             else:
                 print(f"cd: {directory}: No such file or directory")
+        elif cmd == "history":
+            count = int(parts[1]) if len(parts) > 1 else len(history_entries)
+            first_index = max(0, len(history_entries) - count)
+
+            for index, entry in enumerate(history_entries[first_index:], start=first_index + 1):
+                print(f"{index:5d}  {entry}")
         elif cmd == "type":
             argument = parts[1]
 
-            if argument in ["type", "echo", "exit", "pwd", "cd"]:
+            if argument in BUILTINS:
                 print(f"{argument} is a shell builtin")
             else:
                 path_dirs = os.environ["PATH"].split(os.pathsep)
