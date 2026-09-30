@@ -175,9 +175,8 @@ def main():
         if not parts:
             continue
 
-        # Keep the original command text in history and register it with readline
+        # Keep the original command text in our history list for the history command
         history_entries.append(command)
-        readline.add_history(command)
         cmd = parts[0]
 
         if cmd == "exit":
