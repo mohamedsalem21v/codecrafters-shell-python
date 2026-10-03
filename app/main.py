@@ -157,13 +157,31 @@ def parse_command(command):
     return args
 
 
+def read_history_file(path):
+    """Return non-empty commands stored one per line in a history file."""
+    try:
+        with open(path, "r", encoding="utf-8") as history_file:
+            return [line.rstrip("\n") for line in history_file if line.rstrip("\n")]
+    except FileNotFoundError:
+        return []
+
+
+def write_history_entries(path, entries, mode):
+    """Write history entries with the newline required by history files."""
+    with open(path, mode, encoding="utf-8") as history_file:
+        if entries:
+            history_file.write("\n".join(entries) + "\n")
+
+
 def main():
     # Set up readline for tab autocompletion
     readline.set_completer(completer)
     readline.set_completer_delims(' \t\n')                       # Only split words on whitespace
     readline.parse_and_bind("tab: complete")
     readline.set_completion_display_matches_hook(display_hook)   # Custom display for matches
-    history_entries = []
+    history_file_path = os.environ.get("HISTFILE")
+    history_entries = read_history_file(history_file_path) if history_file_path else []
+    persisted_history_count = len(history_entries)
 
     while True:
         try:
@@ -194,11 +212,20 @@ def main():
             else:
                 print(f"cd: {directory}: No such file or directory")
         elif cmd == "history":
-            count = int(parts[1]) if len(parts) > 1 else len(history_entries)
-            first_index = max(0, len(history_entries) - count)
+            if len(parts) == 3 and parts[1] == "-r":
+                history_entries.extend(read_history_file(parts[2]))
+            elif len(parts) == 3 and parts[1] == "-w":
+                write_history_entries(parts[2], history_entries, "w")
+                persisted_history_count = len(history_entries)
+            elif len(parts) == 3 and parts[1] == "-a":
+                write_history_entries(parts[2], history_entries[persisted_history_count:], "a")
+                persisted_history_count = len(history_entries)
+            else:
+                count = int(parts[1]) if len(parts) > 1 else len(history_entries)
+                first_index = max(0, len(history_entries) - count)
 
-            for index, entry in enumerate(history_entries[first_index:], start=first_index + 1):
-                print(f"{index:5d}  {entry}")
+                for index, entry in enumerate(history_entries[first_index:], start=first_index + 1):
+                    print(f"{index:5d}  {entry}")
         elif cmd == "type":
             argument = parts[1]
 
@@ -234,6 +261,13 @@ def main():
 
             if not found:
                 print(f"{cmd}: not found")
+
+    if history_file_path:
+        write_history_entries(
+            history_file_path,
+            history_entries[persisted_history_count:],
+            "a",
+        )
 
 
 if __name__ == "__main__":
