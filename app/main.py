@@ -242,7 +242,12 @@ def main():
 
         # Expand $VAR and ${VAR} in arguments (but not for declare which handles its own args)
         if cmd != "declare":
-            parts = [expand_variables(p) for p in parts]
+            expanded_args = []
+            for p in parts[1:]:
+                expanded = expand_variables(p)
+                if expanded != "":
+                    expanded_args.append(expanded)
+            parts = [parts[0]] + expanded_args
 
         if cmd == "exit":
             break
