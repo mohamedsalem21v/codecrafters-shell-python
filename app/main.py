@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import re
 import readline
 import ctypes
 import ctypes.util
@@ -18,7 +19,7 @@ except (OSError, ValueError, TypeError):
     pass
 
 # List of builtin commands for tab autocompletion
-BUILTINS = ["echo", "exit", "type", "pwd", "cd", "history"]
+BUILTINS = ["echo", "exit", "type", "pwd", "cd", "history", "declare"]
 
 
 def display_hook(substitution, matches, longest_match_length):
@@ -173,6 +174,48 @@ def write_history_entries(path, entries, mode):
             history_file.write("\n".join(entries) + "\n")
 
 
+# Shell variable store
+shell_variables = {}
+
+
+def is_valid_identifier(name):
+    """Check if name is a valid shell variable name (letter/underscore start, then alphanumeric/underscore)."""
+    return bool(re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', name))
+
+
+def expand_variables(text):
+    """Expand $VAR and ${VAR} references in a string using shell_variables."""
+    result = []
+    i = 0
+    while i < len(text):
+        if text[i] == '$' and i + 1 < len(text):
+            if text[i + 1] == '{':
+                # ${VAR} form
+                end = text.find('}', i + 2)
+                if end != -1:
+                    var_name = text[i + 2:end]
+                    result.append(shell_variables.get(var_name, ''))
+                    i = end + 1
+                else:
+                    result.append(text[i])
+                    i += 1
+            elif text[i + 1] == '_' or text[i + 1].isalpha():
+                # $VAR form – greedy match [A-Za-z_][A-Za-z0-9_]*
+                j = i + 1
+                while j < len(text) and (text[j].isalnum() or text[j] == '_'):
+                    j += 1
+                var_name = text[i + 1:j]
+                result.append(shell_variables.get(var_name, ''))
+                i = j
+            else:
+                result.append(text[i])
+                i += 1
+        else:
+            result.append(text[i])
+            i += 1
+    return ''.join(result)
+
+
 def main():
     # Set up readline for tab autocompletion
     readline.set_completer(completer)
@@ -196,6 +239,10 @@ def main():
         # Keep the original command text in our history list for the history command
         history_entries.append(command)
         cmd = parts[0]
+
+        # Expand $VAR and ${VAR} in arguments (but not for declare which handles its own args)
+        if cmd != "declare":
+            parts = [expand_variables(p) for p in parts]
 
         if cmd == "exit":
             break
@@ -246,6 +293,26 @@ def main():
 
                 if not found:
                     print(f"{argument}: not found")
+        elif cmd == "declare":
+            if len(parts) >= 2 and parts[1] == "-p" and len(parts) >= 3:
+                # declare -p NAME — print variable description
+                var_name = parts[2]
+                if var_name in shell_variables:
+                    print(f'declare -- {var_name}="{shell_variables[var_name]}"')
+                else:
+                    print(f"declare: {var_name}: not found")
+            elif len(parts) >= 2 and parts[1] != "-p":
+                # declare NAME=VALUE — assign a variable
+                assignment = parts[1]
+                if '=' in assignment:
+                    name, value = assignment.split('=', 1)
+                else:
+                    name = assignment
+                    value = ''
+                if is_valid_identifier(name):
+                    shell_variables[name] = value
+                else:
+                    print(f"declare: `{assignment}': not a valid identifier")
         else:
             path_dirs = os.environ["PATH"].split(os.pathsep)
 
