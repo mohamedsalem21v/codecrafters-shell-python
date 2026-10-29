@@ -216,6 +216,44 @@ def expand_variables(text):
     return ''.join(result)
 
 
+def parse_redirections(parts):
+    """Extract redirection operators from parsed arguments.
+
+    Returns (clean_parts, stdout_file, stderr_file, stdout_append, stderr_append).
+    """
+    clean = []
+    stdout_file = None
+    stderr_file = None
+    stdout_append = False
+    stderr_append = False
+    i = 0
+
+    while i < len(parts):
+        token = parts[i]
+
+        if token in (">>", "1>>"):
+            stdout_file = parts[i + 1]
+            stdout_append = True
+            i += 2
+        elif token == "2>>":
+            stderr_file = parts[i + 1]
+            stderr_append = True
+            i += 2
+        elif token in (">", "1>"):
+            stdout_file = parts[i + 1]
+            stdout_append = False
+            i += 2
+        elif token == "2>":
+            stderr_file = parts[i + 1]
+            stderr_append = False
+            i += 2
+        else:
+            clean.append(token)
+            i += 1
+
+    return clean, stdout_file, stderr_file, stdout_append, stderr_append
+
+
 def main():
     # Set up readline for tab autocompletion
     readline.set_completer(completer)
@@ -249,90 +287,128 @@ def main():
                     expanded_args.append(expanded)
             parts = [parts[0]] + expanded_args
 
-        if cmd == "exit":
-            break
-        elif cmd == "echo":
-            print(" ".join(parts[1:]))
-        elif cmd == "pwd":
-            print(os.getcwd())
-        elif cmd == "cd":
-            directory = parts[1]
-            if directory == "~":
-                directory = os.environ["HOME"]
-            if os.path.isdir(directory):
-                os.chdir(directory)
-            else:
-                print(f"cd: {directory}: No such file or directory")
-        elif cmd == "history":
-            if len(parts) == 3 and parts[1] == "-r":
-                history_entries.extend(read_history_file(parts[2]))
-            elif len(parts) == 3 and parts[1] == "-w":
-                write_history_entries(parts[2], history_entries, "w")
-                persisted_history_count = len(history_entries)
-            elif len(parts) == 3 and parts[1] == "-a":
-                write_history_entries(parts[2], history_entries[persisted_history_count:], "a")
-                persisted_history_count = len(history_entries)
-            else:
-                count = int(parts[1]) if len(parts) > 1 else len(history_entries)
-                first_index = max(0, len(history_entries) - count)
+        # Parse and remove redirection operators from the argument list
+        parts, stdout_file, stderr_file, stdout_append, stderr_append = parse_redirections(parts)
+        cmd = parts[0] if parts else cmd
 
-                for index, entry in enumerate(history_entries[first_index:], start=first_index + 1):
-                    print(f"{index:5d}  {entry}")
-        elif cmd == "type":
-            argument = parts[1]
+        # Open redirection files if needed
+        stdout_target = None
+        stderr_target = None
+        saved_stdout = None
+        saved_stderr = None
 
-            if argument in BUILTINS:
-                print(f"{argument} is a shell builtin")
+        try:
+            if stdout_file:
+                mode = "a" if stdout_append else "w"
+                stdout_target = open(stdout_file, mode)
+                saved_stdout = os.dup(1)
+                os.dup2(stdout_target.fileno(), 1)
+
+            if stderr_file:
+                mode = "a" if stderr_append else "w"
+                stderr_target = open(stderr_file, mode)
+                saved_stderr = os.dup(2)
+                os.dup2(stderr_target.fileno(), 2)
+
+            if cmd == "exit":
+                break
+            elif cmd == "echo":
+                print(" ".join(parts[1:]))
+            elif cmd == "pwd":
+                print(os.getcwd())
+            elif cmd == "cd":
+                directory = parts[1]
+                if directory == "~":
+                    directory = os.environ["HOME"]
+                if os.path.isdir(directory):
+                    os.chdir(directory)
+                else:
+                    print(f"cd: {directory}: No such file or directory")
+            elif cmd == "history":
+                if len(parts) == 3 and parts[1] == "-r":
+                    history_entries.extend(read_history_file(parts[2]))
+                elif len(parts) == 3 and parts[1] == "-w":
+                    write_history_entries(parts[2], history_entries, "w")
+                    persisted_history_count = len(history_entries)
+                elif len(parts) == 3 and parts[1] == "-a":
+                    write_history_entries(parts[2], history_entries[persisted_history_count:], "a")
+                    persisted_history_count = len(history_entries)
+                else:
+                    count = int(parts[1]) if len(parts) > 1 else len(history_entries)
+                    first_index = max(0, len(history_entries) - count)
+
+                    for index, entry in enumerate(history_entries[first_index:], start=first_index + 1):
+                        print(f"{index:5d}  {entry}")
+            elif cmd == "type":
+                argument = parts[1]
+
+                if argument in BUILTINS:
+                    print(f"{argument} is a shell builtin")
+                else:
+                    path_dirs = os.environ["PATH"].split(os.pathsep)
+
+                    found = False
+
+                    for directory in path_dirs:
+                        full_path = os.path.join(directory, argument)
+
+                        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                            print(f"{argument} is {full_path}")
+                            found = True
+                            break
+
+                    if not found:
+                        print(f"{argument}: not found")
+            elif cmd == "declare":
+                if len(parts) >= 2 and parts[1] == "-p" and len(parts) >= 3:
+                    # declare -p NAME -- print variable description
+                    var_name = parts[2]
+                    if var_name in shell_variables:
+                        print(f'declare -- {var_name}="{shell_variables[var_name]}"')
+                    else:
+                        print(f"declare: {var_name}: not found")
+                elif len(parts) >= 2 and parts[1] != "-p":
+                    # declare NAME=VALUE -- assign a variable
+                    assignment = parts[1]
+                    if '=' in assignment:
+                        name, value = assignment.split('=', 1)
+                    else:
+                        name = assignment
+                        value = ''
+                    if is_valid_identifier(name):
+                        shell_variables[name] = value
+                    else:
+                        print(f"declare: `{assignment}': not a valid identifier")
             else:
                 path_dirs = os.environ["PATH"].split(os.pathsep)
 
                 found = False
 
                 for directory in path_dirs:
-                    full_path = os.path.join(directory, argument)
+                    full_path = os.path.join(directory, cmd)
 
                     if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                        print(f"{argument} is {full_path}")
+                        subprocess.run([cmd] + parts[1:], executable=full_path)
                         found = True
                         break
 
                 if not found:
-                    print(f"{argument}: not found")
-        elif cmd == "declare":
-            if len(parts) >= 2 and parts[1] == "-p" and len(parts) >= 3:
-                # declare -p NAME — print variable description
-                var_name = parts[2]
-                if var_name in shell_variables:
-                    print(f'declare -- {var_name}="{shell_variables[var_name]}"')
-                else:
-                    print(f"declare: {var_name}: not found")
-            elif len(parts) >= 2 and parts[1] != "-p":
-                # declare NAME=VALUE — assign a variable
-                assignment = parts[1]
-                if '=' in assignment:
-                    name, value = assignment.split('=', 1)
-                else:
-                    name = assignment
-                    value = ''
-                if is_valid_identifier(name):
-                    shell_variables[name] = value
-                else:
-                    print(f"declare: `{assignment}': not a valid identifier")
-        else:
-            path_dirs = os.environ["PATH"].split(os.pathsep)
+                    print(f"{cmd}: not found")
 
-            found = False
-
-            for directory in path_dirs:
-                full_path = os.path.join(directory, cmd)
-
-                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                    subprocess.run([cmd] + parts[1:], executable=full_path)
-                    found = True
-                    break
-
-            if not found:
-                print(f"{cmd}: not found")
+        finally:
+            # Always restore original stdout/stderr after each command
+            if saved_stdout is not None:
+                sys.stdout.flush()
+                os.dup2(saved_stdout, 1)
+                os.close(saved_stdout)
+            if saved_stderr is not None:
+                sys.stderr.flush()
+                os.dup2(saved_stderr, 2)
+                os.close(saved_stderr)
+            if stdout_target is not None:
+                stdout_target.close()
+            if stderr_target is not None:
+                stderr_target.close()
 
     if history_file_path:
         write_history_entries(
